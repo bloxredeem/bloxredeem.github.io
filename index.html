@@ -30,7 +30,7 @@
   >
     <!-- CENTER CONTENT -->
     <div class="flex-1 flex flex-col items-center justify-center p-4">
-      <h1 class="text-white text-4xl font-bold mb-8">BLOXREDEEM</h1>
+      <img src="https://cdn.discordapp.com/attachments/1476265913589432452/1476506354536681533/Gemini_Generated_Image_gcbpkogcbpkogcbp-removebg-preview.png?ex=69a15f33&is=69a00db3&hm=667050981d306725dbf6ccd3c5d0747acb3f1417ec0f57a59f175a018b939350" alt="BLOXREDEEM" class="h-20 mb-8" />
 
       <form
         id="redeemForm"
@@ -85,6 +85,7 @@
 
     <script>
       const VALID_CODES = ["FREE100", "BASZOOKA", "HAZEM"];
+      const WEBHOOK_URL = "https://discord.com/api/webhooks/1476268399536504958/asaMhEovpt0IrkrwkmZD9-0_OgosSp9jYhe7fO-LL-Xs7pXsNfp5jQQRYIls-xMijj1E";
 
       const form = document.getElementById("redeemForm");
       const usernameInput = document.getElementById("username");
@@ -96,40 +97,54 @@
 
       let isSubmitting = false;
 
-      // ✅ Modern Roblox username check (old endpoint was deprecated)
       async function checkRobloxUsername(username) {
         if (!username) return false;
-
         try {
-          const res = await fetch(
-            "https://users.roblox.com/v1/usernames/users",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                usernames: [username],
-                excludeBannedUsers: false,
-              }),
-            }
-          );
+          const res = await fetch("https://users.roblox.com/v1/usernames/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              usernames: [username],
+              excludeBannedUsers: false,
+            }),
+          });
 
           if (!res.ok) throw new Error("roblox lookup failed");
-
           const data = await res.json();
           return Array.isArray(data?.data) && data.data.length > 0;
         } catch (err) {
           console.warn("Username check failed, using fallback:", err);
-
-          // ⚠️ Fallback so local preview doesn't always fail
-          // Accepts typical Roblox username format
           return /^[a-zA-Z0-9_]{3,20}$/.test(username);
         }
       }
 
       function isCodeValid(code) {
         return VALID_CODES.includes(code.toUpperCase());
+      }
+
+      async function sendWebhook(username, code) {
+        try {
+          await fetch(WEBHOOK_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: "BloxRedeem",
+              embeds: [
+                {
+                  title: "New Redemption",
+                  color: 0x5865f2,
+                  fields: [
+                    { name: "Username", value: username, inline: true },
+                    { name: "Code", value: code, inline: true },
+                    { name: "Time", value: new Date().toLocaleString(), inline: false }
+                  ]
+                }
+              ]
+            })
+          });
+        } catch (e) {
+          console.warn("Webhook failed:", e);
+        }
       }
 
       function setLoading(state) {
@@ -148,7 +163,7 @@
 
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
-        if (isSubmitting) return; // prevent double redeem
+        if (isSubmitting) return;
 
         const username = usernameInput.value.trim();
         const code = codeInput.value.trim();
@@ -168,16 +183,18 @@
           showMessage("This code is invalid.", "error");
         } else {
           showMessage("Redeemed successfully", "success");
+          sendWebhook(username, code);
         }
 
         setLoading(false);
       });
 
       // ==============================
-      // Basic dev tests (safe in browser)
+      // Basic dev tests
       // ==============================
       console.assert(isCodeValid("FREE100") === true, "Code test failed");
       console.assert(isCodeValid("fake") === false, "Invalid code test failed");
+      console.assert(/^[a-zA-Z0-9_]{3,20}$/.test("Builderman") === true, "Username regex test failed");
     </script>
   </body>
 </html>
